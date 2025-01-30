@@ -3,6 +3,7 @@ use std::process::Command;
 use colored::*;
 use inquire::Text;
 use std::fs;
+use std::collections::HashMap;
 
 const ASCII_ART: &str = r#"
  _       _________          _______  _        _______  _______  _______  _        _______  _______  _______  _______
@@ -20,6 +21,16 @@ NixPKGManager - Simplify your Nix package management
 fn main() {
     println!("{}", ASCII_ART.cyan());
 
+    let mut aliases = HashMap::new();
+    // Définir les alias
+    aliases.insert("i", "install");
+    aliases.insert("rm", "remove");
+    aliases.insert("ls", "list");
+    aliases.insert("up", "update");
+    aliases.insert("s", "search");
+    aliases.insert("cfg", "config");
+    aliases.insert("e", "edit");
+
     loop {
         let input = Text::new("nix-manager> ")
             .prompt()
@@ -35,13 +46,47 @@ fn main() {
             continue;
         }
 
-        match args[0] {
-            "install" | "i" if args.len() > 1 => install(args[1]),
-            "remove" | "rm" if args.len() > 1 => remove(args[1]),
-            "list" | "ls" => list(),
-            "update" | "up" => update(),
-            "search" | "s" if args.len() > 1 => search(args[1]),
-            "config" | "cfg" if args.len() > 2 => config(args[1], args[2]),
+        // Vérifie si l'entrée est un alias
+        let command = aliases.get(args[0]).unwrap_or(&args[0]);
+
+        match *command {
+            "install" => {
+                if args.len() > 1 {
+                    install(args[1]);
+                } else {
+                    println!("{}", "Erreur: Aucune cible spécifiée pour l'installation".red());
+                }
+            }
+            "remove" => {
+                if args.len() > 1 {
+                    remove(args[1]);
+                } else {
+                    println!("{}", "Erreur: Aucune cible spécifiée pour la suppression".red());
+                }
+            }
+            "list" => list(),
+            "update" => update(),
+            "search" => {
+                if args.len() > 1 {
+                    search(args[1]);
+                } else {
+                    println!("{}", "Erreur: Aucun mot-clé spécifié pour la recherche".red());
+                }
+            }
+            "config" => {
+                if args.len() > 2 {
+                    config(args[1], args[2]);
+                } else {
+                    println!("{}", "Erreur: Action ou paquet manquant pour la configuration".red());
+                }
+            }
+            "edit" => {
+                if args.len() > 1 {
+                    config("edit", args[1]);
+                } else {
+                    println!("{}", "Erreur: Nom de paquet manquant pour l'édition".red());
+                }
+            }
             _ => println!("{}", "Commande inconnue! Tapez 'exit' pour quitter.".red()),
         }
     }
