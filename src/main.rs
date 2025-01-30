@@ -1,9 +1,8 @@
-use clap::{Parser, Subcommand};
-use std::process::Command;
 use colored::*;
 use inquire::Text;
-use std::fs;
 use std::collections::HashMap;
+use std::fs;
+use std::process::Command;
 
 const ASCII_ART: &str = r#"
  _       _________          _______  _        _______  _______  _______  _        _______  _______  _______  _______
@@ -54,14 +53,20 @@ fn main() {
                 if args.len() > 1 {
                     install(args[1]);
                 } else {
-                    println!("{}", "Erreur: Aucune cible spécifiée pour l'installation".red());
+                    println!(
+                        "{}",
+                        "Erreur: Aucune cible spécifiée pour l'installation".red()
+                    );
                 }
             }
             "remove" => {
                 if args.len() > 1 {
                     remove(args[1]);
                 } else {
-                    println!("{}", "Erreur: Aucune cible spécifiée pour la suppression".red());
+                    println!(
+                        "{}",
+                        "Erreur: Aucune cible spécifiée pour la suppression".red()
+                    );
                 }
             }
             "list" => list(),
@@ -70,14 +75,20 @@ fn main() {
                 if args.len() > 1 {
                     search(args[1]);
                 } else {
-                    println!("{}", "Erreur: Aucun mot-clé spécifié pour la recherche".red());
+                    println!(
+                        "{}",
+                        "Erreur: Aucun mot-clé spécifié pour la recherche".red()
+                    );
                 }
             }
             "config" => {
                 if args.len() > 2 {
                     config(args[1], args[2]);
                 } else {
-                    println!("{}", "Erreur: Action ou paquet manquant pour la configuration".red());
+                    println!(
+                        "{}",
+                        "Erreur: Action ou paquet manquant pour la configuration".red()
+                    );
                 }
             }
             "edit" => {
@@ -165,8 +176,11 @@ fn config(action: &str, package: &str) {
     let config_path = "/etc/nixos/configuration.nix";
     let content = fs::read_to_string(config_path).expect("Impossible de lire le fichier");
     let new_content = match action {
-        "add" => format!("{}
-  environment.systemPackages = with pkgs; [ {} ];", content, package),
+        "add" => format!(
+            "{}
+  environment.systemPackages = with pkgs; [ {} ];",
+            content, package
+        ),
         "remove" | "rm" => content.replace(&format!(" {}", package), ""),
         "edit" | "e" => {
             println!("Ouvre le fichier de configuration...");
@@ -180,6 +194,8 @@ fn config(action: &str, package: &str) {
     };
     fs::write(config_path, new_content).expect("Impossible de modifier le fichier");
     println!("{} Modification appliquée!", "✔".green());
-    Command::new("nixos-rebuild").arg("switch").status().unwrap();
+    Command::new("nixos-rebuild")
+        .arg("switch")
+        .status()
+        .unwrap();
 }
-
