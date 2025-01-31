@@ -29,6 +29,7 @@ fn main() {
     aliases.insert("s", "search");
     aliases.insert("cfg", "config");
     aliases.insert("e", "edit");
+    aliases.insert("h", "help");
 
     loop {
         let input = Text::new("nix-manager> ")
@@ -97,6 +98,23 @@ fn main() {
                 } else {
                     println!("{}", "Erreur: Nom de paquet manquant pour l'édition".red());
                 }
+            }
+            "help" => {
+                println!(
+                    "{}",
+                    "📚 Commandes disponibles:
+                    - install [package]: Installe un paquet
+                    - remove [package]: Supprime un paquet
+                    - list: Liste les paquets installés
+                    - update: Met à jour les paquets
+                    - search [keyword]: Recherche des paquets
+                    - config add [package]: Ajoute un paquet à la configuration
+                    - config remove [package]: Supprime un paquet de la configuration
+                    - config edit: Ouvre le fichier de configuration
+                    - help: Affiche ce message d'aide
+                    - exit: Quitte le programme"
+                        .blue()
+                );
             }
             _ => println!("{}", "Commande inconnue! Tapez 'exit' pour quitter.".red()),
         }
