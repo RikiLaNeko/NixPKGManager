@@ -139,7 +139,7 @@ fn install(package: &str) {
 fn remove(package: &str) {
     println!("{} {}...", "➡ Suppression de".yellow(), package);
     let status = Command::new("nix")
-        .args(["profile", "remove", &format!("nixpkgs#{}", package)])
+        .args(["profile", "remove", &format!("{}",package)])
         .status()
         .expect("Erreur lors de la suppression");
     if status.success() {
