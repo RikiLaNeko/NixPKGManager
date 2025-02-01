@@ -3,6 +3,9 @@ use inquire::Text;
 use std::collections::HashMap;
 use std::fs;
 use std::process::Command;
+use regex::Regex;
+
+
 
 const ASCII_ART: &str = r#"
  _       _________          _______  _        _______  _______  _______  _        _______  _______  _______  _______
@@ -189,31 +192,65 @@ fn search(keyword: &str) {
         eprintln!("{} Aucun paquet trouvé", "✖".red());
     }
 }
+pub fn config(action: &str, package: &str) {
+    // Vérifie si le programme est exécuté en root
+    if unsafe { libc::geteuid() } != 0 {
+        let args: Vec<String> = std::env::args().collect();
+        let status = Command::new("sudo")
+            .args(&args)
+            .status()
+            .expect("Impossible de relancer l'application en tant que superutilisateur");
+        if !status.success() {
+            eprintln!("\u{2716} Impossible de relancer l'application en tant que superutilisateur");
+        }
+        return;
+    }
 
-fn config(action: &str, package: &str) {
     let config_path = "/etc/nixos/configuration.nix";
     let content = fs::read_to_string(config_path).expect("Impossible de lire le fichier");
-    let new_content = match action {
-        "add" => format!(
-            "{}
-  environment.systemPackages = with pkgs; [ {} ];",
-            content, package
-        ),
-        "remove" | "rm" => content.replace(&format!(" {}", package), ""),
-        "edit" | "e" => {
-            println!("Ouvre le fichier de configuration...");
-            Command::new("nano").arg(config_path).status().unwrap();
-            return;
+    let re = Regex::new(r"(?s)(environment\.systemPackages\s*=\s*with pkgs; \[)(.*?)(\];)").unwrap();
+
+    if let Some(captures) = re.captures(&content) {
+        let packages_block = captures.get(2).unwrap().as_str().trim();
+        let mut packages: Vec<&str> = packages_block.lines().map(|s| s.trim()).collect();
+
+        match action {
+            "add" => {
+                if packages.contains(&package) {
+                    eprintln!("\u{2716} Le paquet '{}' est déjà présent", package);
+                    return;
+                }
+                packages.push(package);
+            }
+            "remove" | "rm" => {
+                if !packages.contains(&package) {
+                    eprintln!("\u{2716} Le paquet '{}' n'est pas présent", package);
+                    return;
+                }
+                packages.retain(|&p| p != package);
+            }
+            "edit" | "e" => {
+                println!("Ouverture du fichier de configuration...");
+                Command::new("nano").arg(config_path).status().unwrap();
+                return;
+            }
+            _ => {
+                eprintln!("\u{2716} Action inconnue");
+                return;
+            }
         }
-        _ => {
-            eprintln!("{} Action inconnue", "✖".red());
-            return;
-        }
-    };
-    fs::write(config_path, new_content).expect("Impossible de modifier le fichier");
-    println!("{} Modification appliquée!", "✔".green());
-    Command::new("nixos-rebuild")
-        .arg("switch")
-        .status()
-        .unwrap();
+
+        let new_packages_block = packages.join("\n    ");
+        let new_content = re.replace(&content, format!("$1\n    {}\n$3", new_packages_block));
+
+        fs::write(config_path, new_content.to_string()).expect("Impossible de modifier le fichier");
+        println!("\u{2714} Modification appliquée!");
+
+        Command::new("nixos-rebuild")
+            .arg("switch")
+            .status()
+            .expect("Échec de la reconstruction du système");
+    } else {
+        eprintln!("\u{2716} Ligne 'environment.systemPackages' non trouvée");
+    }
 }

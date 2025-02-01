@@ -7,3 +7,5 @@ edition = "2024"
 clap = { version = "4.5.27", features = ["derive"] }
 colored = "3.0.0"
 inquire = "0.7.5"
+libc = "0.2.112"
+regex = "1.5.4"
