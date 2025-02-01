@@ -2,7 +2,8 @@ use colored::*;
 use inquire::Text;
 use std::collections::HashMap;
 use std::fs;
-use std::process::Command;
+use std::io::{self, Write};
+use std::process::{Command, exit};
 use regex::Regex;
 
 
@@ -192,18 +193,22 @@ fn search(keyword: &str) {
         eprintln!("{} Aucun paquet trouvé", "✖".red());
     }
 }
+
 pub fn config(action: &str, package: &str) {
     // Vérifie si le programme est exécuté en root
     if unsafe { libc::geteuid() } != 0 {
         let args: Vec<String> = std::env::args().collect();
+        println!("L'application se relancera en tant que superutilisateur...");
         let status = Command::new("sudo")
             .args(&args)
             .status()
             .expect("Impossible de relancer l'application en tant que superutilisateur");
+
         if !status.success() {
             eprintln!("\u{2716} Impossible de relancer l'application en tant que superutilisateur");
+            exit(1);
         }
-        return;
+        return; // Le programme redémarre, donc on arrête ici.
     }
 
     let config_path = "/etc/nixos/configuration.nix";
@@ -246,11 +251,30 @@ pub fn config(action: &str, package: &str) {
         fs::write(config_path, new_content.to_string()).expect("Impossible de modifier le fichier");
         println!("\u{2714} Modification appliquée!");
 
-        Command::new("nixos-rebuild")
-            .arg("switch")
-            .status()
-            .expect("Échec de la reconstruction du système");
+        // Demande de confirmation pour reconstruire NixOS
+        print!("Voulez-vous reconstruire NixOS maintenant ? (O/n) : ");
+        io::stdout().flush().unwrap();
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).unwrap();
+        let input = input.trim().to_lowercase();
+
+        if input.is_empty() || input == "o" || input == "oui" || input == "y" || input == "yes" {
+            println!("Reconstruction du système...");
+            let status = Command::new("nixos-rebuild")
+                .arg("switch")
+                .status()
+                .expect("Échec de la reconstruction du système");
+
+            if !status.success() {
+                eprintln!("\u{2716} Échec de la reconstruction de NixOS");
+            } else {
+                println!("\u{2714} Système reconstruit avec succès !");
+            }
+        } else {
+            println!("Reconstruction annulée.");
+        }
     } else {
         eprintln!("\u{2716} Ligne 'environment.systemPackages' non trouvée");
     }
 }
+
